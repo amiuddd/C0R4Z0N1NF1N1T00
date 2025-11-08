@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corazón Infinito 3D</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at center, #0b0c1b, #000);
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let w = canvas.width = window.innerWidth;
+    let h = canvas.height = window.innerHeight;
+
+    const heartPoints = [];
+    const particles = [];
+    const depthRange = 50;
+    const heartScale = 10;
+
+    // Calcular puntos del corazón
+    for (let t = 0; t < Math.PI * 2; t += 0.01) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      heartPoints.push({ 
+        x: x * heartScale, 
+        y: -y * heartScale
+      });
+    }
+
+    // Crear partículas
+    for (let i = 0; i < 1500; i++) {
+      const p = heartPoints[Math.floor(Math.random() * heartPoints.length)];
+      const z = (Math.random() - 0.5) * depthRange;
+      
+      particles.push({
+        x: w / 2 + (Math.random() - 0.5) * 100,
+        y: h / 2 + (Math.random() - 0.5) * 100,
+        z: z,
+        tx: w / 2 + p.x,
+        ty: h / 2 + p.y,
+        tz: z,
+        color: `rgba(255, 20, 147, ${0.7 + Math.random() * 0.3})`,
+        size: Math.random() * 1.5 + 0.8,
+        speed: Math.random() * 0.02 + 0.005,
+        life: 1,
+        oscillation: Math.random() * Math.PI * 2
+      });
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, w, h);
+      const time = performance.now() / 1000;
+      const angle = time * 0.5;
+      const cosA = Math.cos(angle);
+      const sinA = Math.sin(angle);
+
+      // Efecto de respiración suave
+      const breath = Math.sin(time * 0.8) * 0.1 + 1;
+
+      for (let p of particles) {
+        // Oscilación suave
+        p.oscillation += 0.02;
+        const osc = Math.sin(p.oscillation) * 0.3;
+        
+        // Movimiento hacia la posición objetivo
+        p.x += (p.tx - p.x + osc) * p.speed;
+        p.y += (p.ty - p.y + osc) * p.speed;
+        p.z += (p.tz - p.z) * p.speed;
+
+        // Transformación 3D
+        const dx = p.x - w / 2;
+        const dz = p.z;
+        const rotatedX = dx * cosA - dz * sinA;
+        const rotatedZ = dx * sinA + dz * cosA;
+
+        // Perspectiva con efecto de respiración
+        const scale = (400 / (400 + rotatedZ + 200)) * breath;
+        const px = rotatedX + w / 2;
+        const py = p.y;
+        const size = p.size * scale;
+
+        // Solo dibujar si está en pantalla
+        if (size > 0.1 && px >= -50 && px <= w + 50 && py >= -50 && py <= h + 50) {
+          ctx.beginPath();
+          ctx.arc(px, py, size, 0, Math.PI * 2);
+          
+          // Color con variación sutil
+          const alpha = 0.7 + (rotatedZ / depthRange) * 0.3;
+          ctx.fillStyle = `rgba(255, 20, 147, ${alpha})`;
+          ctx.fill();
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    function resizeCanvas() {
+      w = canvas.width = window.innerWidth;
+      h = canvas.height = window.innerHeight;
+      
+      // Recalcular posiciones objetivo al redimensionar
+      for (let p of particles) {
+        const heartPoint = heartPoints[Math.floor(Math.random() * heartPoints.length)];
+        p.tx = w / 2 + heartPoint.x;
+        p.ty = h / 2 + heartPoint.y;
+      }
+    }
+
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
+    
+    // Inicializar
+    resizeCanvas();
+    animate();
+
+    // Prevenir gestos táctiles no deseados
+    document.addEventListener('gesturestart', function(e) {
+      e.preventDefault();
+    });
+    
+    document.addEventListener('gesturechange', function(e) {
+      e.preventDefault();
+    });
+    
+    document.addEventListener('gestureend', function(e) {
+      e.preventDefault();
+    });
+  </script>
+</body>
+</html>
